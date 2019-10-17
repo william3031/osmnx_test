@@ -14,10 +14,12 @@ from osgeo import ogr, osr
 import fiona
 from descartes import PolygonPatch
 from shapely.geometry import Point, LineString, Polygon
+import shapely.wkt
 ox.config(log_console=True, use_cache=True)
 ox.__version__
 
 # The example is from here: https://github.com/gboeing/osmnx-examples/blob/master/notebooks/13-isolines-isochrones.ipynb
+# exporting the shapely polygon comes from here
 
 # the area - ignore for now
 #G = ox.graph_from_bbox(-37.70, -37.795, 144.949, 144.84, network_type='walk')
@@ -29,7 +31,6 @@ place = 'Moonee Ponds, Victoria, Australia'
 network_type = 'walk'
 trip_times = [5, 10] #in minutes
 travel_speed = 4.8 #walking speed in km/hour
-
 
 # download the street network
 G = ox.graph_from_place(place, network_type=network_type)
@@ -82,14 +83,6 @@ for polygon, fc in zip(isochrone_polys, iso_colors):
     patch = PolygonPatch(polygon, fc=fc, ec='none', alpha=0.6, zorder=-1)
     ax.add_patch(patch)
 plt.show()
-
-#shapely object
-isochrone_polys
-
-#area of polys in list
-for i in isochrone_polys:
-    mins = 5
-    print(i.area)
     
 # 400m - 5 minutes
 isochrone_polys[1]
@@ -97,62 +90,27 @@ isochrone_polys[1]
 # 800m - 10 minutes
 isochrone_polys[0]
 
-#bounds
-isochrone_polys[0].bounds
+# shapely doesn't have a crs. need to export the wkt then reimport!
+# to text
+f = open('isochrone_polys_0.txt', 'w') 
+f.write(isochrone_polys[0].wkt)  
+f.close() 
 
-# Retrieve only edges from the graph
-edges = ox.graph_to_gdfs(G, nodes=False, edges=True)
-# Check columns
-print(edges.columns)
-# Check crs
-print(edges.crs)
+f = open('isochrone_polys_1.txt', 'w') 
+f.write(isochrone_polys[1].wkt)  
+f.close() 
 
-#doesn't work
-from pyproj import Proj, transform
-import fiona
-from fiona.crs import from_epsg
-Proj(isochrone_polys[0].crs)
-
-#no geometry
-isochrone_polys[0].geometry
-
-#test 1 -----------------------------------
-sr = osr.SpatialReference()
-sr.ImportFromEPSG(4326)
-driver = ogr.GetDriverByName('ESRI Shapefile')
-ds = driver.CreateDataSource('abc.shp')
-lyr = ds.CreateLayer('route', sr, ogr.wkbPolygon)
-
-# Make a geometry, from Shapely object
-geom = ogr.CreateGeometryFromWkb(isochrone_polys[0].wkb)
-feat.SetGeometry(geom)
-
-layer.CreateFeature(feat)
-feat = geom = None  # destroy these
-
-# Save and close everything
-ds = layer = feat = geom = None
-
-
-#test 2 ----------------------------------
-from osgeo import osr, ogr # import osr, ogr 
-sr = osr.SpatialReference()
-sr.ImportFromEPSG(4326)
-driver = ogr.GetDriverByName('ESRI Shapefile')
-ds = driver.CreateDataSource(isochrone_polys[0])
-lyr = ds.CreateLayer('poly', sr, ogr.wkbPolygon)
-
-#test3 ------------------------------------------------
-from osgeo import ogr, osr
-from shapely.geometry import Polygon
-
-isochrone_polys[0]
+# read wkt and use it to create a shapely polygon P
+with open('isochrone_polys_1.txt') as f:
+    x = f.readline()
+P = shapely.wkt.loads(x)
 
 # Now convert it to a shapefile with OGR    
 sr = osr.SpatialReference()
-sr.ImportFromEPSG(4326)
+# or sr.ImportFromProj4(edges.crs)
+sr.ImportFromProj4('+proj=utm +zone=55 +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
 driver = ogr.GetDriverByName('ESRI Shapefile')
-ds = driver.CreateDataSource('abc.shp')
+ds = driver.CreateDataSource('moonee_ponds_400m.shp')
 layer = ds.CreateLayer('route', sr, ogr.wkbPolygon)# Add one attribute
 layer.CreateField(ogr.FieldDefn('id', ogr.OFTInteger))
 defn = layer.GetLayerDefn()
@@ -164,11 +122,10 @@ feat = ogr.Feature(defn)
 feat.SetField('id', 123)
 
 # Make a geometry, from Shapely object
-geom = ogr.CreateGeometryFromWkb(isochrone_polys[0].wkb)
+geom = ogr.CreateGeometryFromWkb(P.wkb)
 feat.SetGeometry(geom)
-
 layer.CreateFeature(feat)
-feat = geom = None  # destroy these
+feat =  None 
 
-# Save and close everything
-ds = layer = feat = geom = None
+# Save and close the data source
+ds = None
