@@ -172,3 +172,16 @@ feat = geom = None  # destroy these
 
 # Save and close everything
 ds = layer = feat = geom = None
+
+
+isochrone_polys[0].wkt
+
+
+# to text ___________________________
+f = open('isochrone_polys_0.txt', 'w') 
+f.write(isochrone_polys[0].wkt)  
+f.close() 
+
+f = open('isochrone_polys_1.txt', 'w') 
+f.write(isochrone_polys[1].wkt)  
+f.close() 
