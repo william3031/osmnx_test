@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import osmnx as ox
 from osgeo import ogr, osr
-import fiona
 from descartes import PolygonPatch
 from shapely.geometry import Point, LineString, Polygon
 import shapely.wkt
@@ -92,16 +91,16 @@ isochrone_polys[0]
 
 # shapely doesn't have a crs. need to export the wkt then reimport!
 # to text
-f = open('isochrone_polys_0.txt', 'w') 
+f = open('wkt\mp_800m.txt', 'w') 
 f.write(isochrone_polys[0].wkt)  
 f.close() 
 
-f = open('isochrone_polys_1.txt', 'w') 
+f = open('wkt\mp_400m.txt', 'w') 
 f.write(isochrone_polys[1].wkt)  
 f.close() 
 
 # read wkt and use it to create a shapely polygon P
-with open('isochrone_polys_1.txt') as f:
+with open('wkt\mp_400m.txt') as f:
     x = f.readline()
 P = shapely.wkt.loads(x)
 
@@ -110,7 +109,7 @@ sr = osr.SpatialReference()
 # or sr.ImportFromProj4(edges.crs)
 sr.ImportFromProj4('+proj=utm +zone=55 +ellps=WGS84 +datum=WGS84 +units=m +no_defs')
 driver = ogr.GetDriverByName('ESRI Shapefile')
-ds = driver.CreateDataSource('moonee_ponds_400m.shp')
+ds = driver.CreateDataSource('shp\moonee_ponds_400m.shp')
 layer = ds.CreateLayer('route', sr, ogr.wkbPolygon)# Add one attribute
 layer.CreateField(ogr.FieldDefn('id', ogr.OFTInteger))
 defn = layer.GetLayerDefn()
